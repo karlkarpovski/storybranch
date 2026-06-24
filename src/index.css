@@ -1,0 +1,120 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+  CSS custom properties for theming.
+  Dark theme is the default for a creative tool (Figma, Blender, etc.)
+  shadcn/ui components read these variables automatically.
+*/
+@layer base {
+  :root {
+    /* Light theme (fallback) */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 262 83% 58%;
+    --radius: 0.5rem;
+
+    /* Canvas-specific */
+    --canvas-bg: 220 13% 95%;
+    --canvas-grid: 220 13% 88%;
+    --node-bg: 0 0% 100%;
+    --node-border: 214.3 31.8% 85%;
+    --node-header: 262 83% 58%;
+  }
+
+  .dark {
+    /* Dark theme — primary UI mode for StoryBranch */
+    --background: 224 16% 10%;
+    --foreground: 213 31% 91%;
+    --card: 224 16% 13%;
+    --card-foreground: 213 31% 91%;
+    --popover: 224 16% 12%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 263 70% 65%;
+    --primary-foreground: 224 16% 10%;
+    --secondary: 224 16% 16%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 224 16% 16%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 224 16% 18%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 224 16% 20%;
+    --input: 224 16% 16%;
+    --ring: 263 70% 65%;
+    --radius: 0.5rem;
+
+    /* Canvas — slightly darker than the app background */
+    --canvas-bg: 224 16% 7%;
+    --canvas-grid: 224 16% 14%;
+    --node-bg: 224 16% 13%;
+    --node-border: 224 16% 22%;
+    --node-header: 263 70% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    /* Prevent text selection on UI elements — important for a canvas app */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection inside editable fields */
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* React Flow overrides — integrate with our theme */
+.react-flow__background {
+  background-color: hsl(var(--canvas-bg)) !important;
+}
+
+.react-flow__minimap {
+  background-color: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.react-flow__controls {
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background-color: hsl(var(--card)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+  fill: hsl(var(--foreground)) !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: hsl(var(--accent)) !important;
+}
