@@ -22,7 +22,7 @@ import { PlaceholderSceneNode } from "./PlaceholderSceneNode";
 import { PlaceholderChoiceEdge } from "./PlaceholderChoiceEdge";
 import type { SceneNode, ChoiceEdge } from "../store/canvasStore";
 
-// ─── Node & Edge type registries ─────────────────────────────────────────────
+// ─── Node & Edge type registries ────── ───────────────────────────────────────
 // React Flow requires these to be defined OUTSIDE the component
 // to prevent remounting on every render.
 
