@@ -35,6 +35,8 @@ interface CanvasActions {
   updateNodeData: (id: string, data: Partial<SceneNodeData>) => void;
   setSelectedNodeIds: (ids: string[]) => void;
   clearCanvas: () => void;
+  updateEdgeLabel: (id: string, label: string) => void;
+
 }
 
 type CanvasStore = CanvasState & CanvasActions;
@@ -184,7 +186,18 @@ export const useCanvasStore = create<CanvasStore>()(
       clearCanvas: () => {
         set({ nodes: [], edges: [], selectedNodeIds: [] });
       },
+
+      updateEdgeLabel: (id: string, label: string) => {
+        set({
+          edges: get().edges.map((e) =>
+            e.id === id
+              ? { ...e, data: { ...e.data, label, color: e.data?.color ?? "#a855f7" } }
+              : e
+          ),
+        });
+      },
     }),
     { name: "StoryBranch:Canvas" }
   )
+
 );

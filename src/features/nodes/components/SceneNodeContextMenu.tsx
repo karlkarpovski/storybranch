@@ -69,8 +69,6 @@ export function SceneNodeContextMenu({
   const deleteNode = useCanvasStore((s) => s.deleteNode);
   const updateNodeData = useCanvasStore((s) => s.updateNodeData);
   const addSceneNode = useCanvasStore((s) => s.addSceneNode);
-
-  // We need access to full node for duplication
   const nodes = useCanvasStore((s) => s.nodes);
 
   const handleDuplicate = () => {
@@ -80,8 +78,6 @@ export function SceneNodeContextMenu({
       x: nodePosition.x + 40,
       y: nodePosition.y + 40,
     });
-    // updateNodeData will be called by addSceneNode with default data.
-    // In Phase 5 we'll do a proper deep duplicate.
   };
 
   const handleToggleCollapse = () => {
@@ -94,7 +90,10 @@ export function SceneNodeContextMenu({
 
   return (
     <ContextMenu.Root>
-      <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
+      {/* Remove asChild — just wrap children in a plain trigger */}
+      <ContextMenu.Trigger>
+        {children}
+      </ContextMenu.Trigger>
 
       <ContextMenu.Portal>
         <ContextMenu.Content

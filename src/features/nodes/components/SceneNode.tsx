@@ -82,7 +82,6 @@ export const SceneNode = memo(function SceneNode({
           selected
             ? "border-primary shadow-primary/20 shadow-xl"
             : "border-node-border hover:border-primary/40",
-          // Subtle pulse on selection
           selected && "ring-1 ring-primary/20"
         )}
         style={{ width: 240 }}

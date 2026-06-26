@@ -1,7 +1,4 @@
 // src/features/nodes/hooks/useNodeEditor.ts
-// Manages inline editing state for a single node field.
-// Handles: focus, blur-to-save, Escape-to-cancel, Enter-to-confirm.
-
 import { useState, useCallback, useRef } from "react";
 
 interface UseNodeEditorOptions {
@@ -13,7 +10,8 @@ interface UseNodeEditorOptions {
 interface UseNodeEditorReturn {
   value: string;
   isEditing: boolean;
-  inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   startEditing: () => void;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -27,17 +25,16 @@ export function useNodeEditor({
 }: UseNodeEditorOptions): UseNodeEditorReturn {
   const [value, setValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
-  // Store the value at the time editing started so we can revert on Escape
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const originalValueRef = useRef(initialValue);
 
   const startEditing = useCallback(() => {
-    originalValueRef.current = initialValue;
-    setValue(initialValue);
-    setIsEditing(true);
-    // Focus after React re-renders the input
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [initialValue]);
+  originalValueRef.current = initialValue;
+  setValue(initialValue);
+  setIsEditing(true);
+  // Focus is handled by autoFocus on the input element
+}, [initialValue]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -62,9 +59,7 @@ export function useNodeEditor({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      // CRITICAL: stop React Flow from intercepting keyboard events
       e.stopPropagation();
-
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         save();
@@ -84,6 +79,7 @@ export function useNodeEditor({
     value,
     isEditing,
     inputRef,
+    textareaRef,
     startEditing,
     handleChange,
     handleKeyDown,

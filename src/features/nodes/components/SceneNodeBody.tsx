@@ -27,7 +27,8 @@ function DescriptionField({
   const {
     value,
     isEditing,
-    inputRef,
+    inputRef,      // ← not used here
+    textareaRef,   // ← use this one
     startEditing,
     handleChange,
     handleKeyDown,
@@ -37,8 +38,9 @@ function DescriptionField({
   return (
     <div className="px-2.5 pb-2">
       {isEditing ? (
+        // Update the textarea element — no cast needed:
         <textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          ref={textareaRef}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -52,7 +54,6 @@ function DescriptionField({
             "placeholder:text-muted-foreground/50",
             "focus:border-primary/50"
           )}
-          // Stop React Flow from handling keyboard events in textarea
           onMouseDown={(e) => e.stopPropagation()}
         />
       ) : (

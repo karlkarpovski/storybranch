@@ -1,8 +1,4 @@
 // src/features/nodes/components/SceneNodeHeader.tsx
-// The top section of a scene node:
-// color stripe, scene label (editable), color picker, collapse toggle.
-
-import { useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ColorPicker } from "./ColorPicker";
 import { useNodeEditor } from "../hooks/useNodeEditor";
@@ -37,17 +33,7 @@ export function SceneNodeHeader({
   } = useNodeEditor({ initialValue: label, onSave: onLabelChange });
 
   return (
-    <div
-      className="relative"
-      // Stop React Flow from starting a drag when clicking header controls
-      onMouseDown={(e) => {
-        const target = e.target as HTMLElement;
-        // Allow drag only on the header background itself, not on buttons/inputs
-        if (target.tagName === "BUTTON" || target.tagName === "INPUT") {
-          e.stopPropagation();
-        }
-      }}
-    >
+    <div className="relative">
       {/* Color accent stripe */}
       <div
         className="h-1 w-full rounded-t-lg transition-colors duration-200"
@@ -57,35 +43,52 @@ export function SceneNodeHeader({
       {/* Header content */}
       <div className="flex items-center gap-1.5 px-2.5 py-2">
         {/* Color picker dot */}
-        <ColorPicker value={color} onChange={onColorChange} />
+        <div
+          // noDrag tells React Flow: don't start dragging from this element
+          className="noDrag"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <ColorPicker value={color} onChange={onColorChange} />
+        </div>
 
-        {/* Scene label — click to edit */}
+        {/* Scene label */}
         <div className="flex-1 min-w-0">
           {isEditing ? (
             <input
-              ref={inputRef as React.RefObject<HTMLInputElement>}
+              ref={inputRef}
               value={value}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
+              autoFocus
               className={cn(
                 "w-full bg-transparent text-sm font-semibold",
                 "text-foreground outline-none",
                 "border-b border-primary/50 pb-px",
-                "placeholder:text-muted-foreground"
+                "placeholder:text-muted-foreground",
+                "noDrag"
               )}
               placeholder="Scene name..."
               maxLength={80}
+              // Critical: stop ALL mouse events from reaching React Flow
+              onMouseDown={(e) => e.stopPropagation()}
             />
           ) : (
             <p
-              onClick={startEditing}
               className={cn(
                 "text-sm font-semibold text-foreground",
-                "truncate cursor-text",
-                "hover:text-primary transition-colors"
+                "truncate cursor-text select-none",
+                "hover:text-primary transition-colors",
+                "noDrag" // tells React Flow not to drag from here
               )}
-              title={label}
+              title="Double-click to edit"
+              // Stop mousedown so React Flow doesn't steal the interaction
+              onMouseDown={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                startEditing();
+              }}
             >
               {label || "Untitled Scene"}
             </p>
@@ -98,10 +101,11 @@ export function SceneNodeHeader({
             e.stopPropagation();
             onToggleCollapse();
           }}
+          onMouseDown={(e) => e.stopPropagation()}
           className={cn(
             "w-5 h-5 flex items-center justify-center",
             "text-muted-foreground hover:text-foreground",
-            "transition-colors rounded"
+            "transition-colors rounded noDrag"
           )}
           title={isCollapsed ? "Expand" : "Collapse"}
         >
