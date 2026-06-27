@@ -1,8 +1,18 @@
 // src/features/canvas/components/CanvasToolbar.tsx
 import { useReactFlow } from "@xyflow/react";
 import { useCanvasStore } from "../store/canvasStore";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { cn } from "@/lib/utils";
-import { Plus, Minus, Maximize2, Trash2, ZoomIn } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  Maximize2,
+  Trash2,
+  ZoomIn,
+  Undo2,
+  Redo2,
+  Copy,
+} from "lucide-react";
 
 interface ToolbarButtonProps {
   onClick: () => void;
@@ -49,10 +59,11 @@ function Divider() {
 
 export function CanvasToolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { canUndo, canRedo, undo, redo } = useUndoRedo();
 
-  // ✅ Select primitives individually — never return a new object {}
   const addSceneNode = useCanvasStore((s) => s.addSceneNode);
   const deleteNode = useCanvasStore((s) => s.deleteNode);
+  const duplicateNode = useCanvasStore((s) => s.duplicateNode);
   const selectedNodeIds = useCanvasStore((s) => s.selectedNodeIds);
 
   const handleAddNode = () => {
@@ -66,6 +77,10 @@ export function CanvasToolbar() {
     selectedNodeIds.forEach((id) => deleteNode(id));
   };
 
+  const handleDuplicateSelected = () => {
+    selectedNodeIds.forEach((id) => duplicateNode(id));
+  };
+
   return (
     <div
       className={cn(
@@ -75,12 +90,41 @@ export function CanvasToolbar() {
         "animate-fade-in"
       )}
     >
-      <ToolbarButton onClick={handleAddNode} title="Add Scene Node (A)">
-        <Plus size={16} />
+      {/* Undo / Redo */}
+      <ToolbarButton
+        onClick={undo}
+        title="Undo (Ctrl+Z)"
+        disabled={!canUndo}
+      >
+        <Undo2 size={15} />
+      </ToolbarButton>
+      <ToolbarButton
+        onClick={redo}
+        title="Redo (Ctrl+Shift+Z)"
+        disabled={!canRedo}
+      >
+        <Redo2 size={15} />
       </ToolbarButton>
 
       <Divider />
 
+      {/* Add node */}
+      <ToolbarButton onClick={handleAddNode} title="Add Scene Node (A)">
+        <Plus size={16} />
+      </ToolbarButton>
+
+      {/* Duplicate selected */}
+      <ToolbarButton
+        onClick={handleDuplicateSelected}
+        title="Duplicate Selected (Ctrl+D)"
+        disabled={selectedNodeIds.length === 0}
+      >
+        <Copy size={15} />
+      </ToolbarButton>
+
+      <Divider />
+
+      {/* Zoom controls */}
       <ToolbarButton onClick={() => zoomIn()} title="Zoom In">
         <ZoomIn size={15} />
       </ToolbarButton>
@@ -96,6 +140,7 @@ export function CanvasToolbar() {
 
       <Divider />
 
+      {/* Delete selected */}
       <ToolbarButton
         onClick={handleDeleteSelected}
         title="Delete Selected (Del)"

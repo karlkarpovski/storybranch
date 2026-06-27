@@ -135,6 +135,13 @@ export function Canvas() {
           y: 200 + Math.random() * 200,
         });
       }
+
+      if ((e.key === "d" || e.key === "D") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const { selectedNodeIds, duplicateNode } = useCanvasStore.getState();
+        selectedNodeIds.forEach((id) => duplicateNode(id));
+      }
+
     };
 
     window.addEventListener("keydown", handleKeyDown);

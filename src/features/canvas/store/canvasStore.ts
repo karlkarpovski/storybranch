@@ -14,8 +14,7 @@ import {
 import { generateId } from "@/lib/utils";
 import type { SceneNodeData, ChoiceEdgeData } from "@/types";
 import { DEFAULT_EDGE_COLOR } from "@/features/edges/constants";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { useHistoryStore } from "./historyStore";
 
 export type SceneNode = Node<SceneNodeData>;
 export type ChoiceEdge = Edge<ChoiceEdgeData>;
@@ -31,12 +30,14 @@ interface CanvasActions {
   onEdgesChange: (changes: EdgeChange<ChoiceEdge>[]) => void;
   onConnect: (connection: Connection) => void;
   addSceneNode: (position: { x: number; y: number }) => void;
+  duplicateNode: (id: string) => void;
   deleteNode: (id: string) => void;
   deleteEdge: (id: string) => void;
   updateNodeData: (id: string, data: Partial<SceneNodeData>) => void;
   updateEdgeLabel: (id: string, label: string) => void;
   updateEdgeData: (id: string, data: Partial<ChoiceEdgeData>) => void;
   setSelectedNodeIds: (ids: string[]) => void;
+  restoreSnapshot: (nodes: SceneNode[], edges: ChoiceEdge[]) => void;
   clearCanvas: () => void;
 }
 
@@ -57,7 +58,9 @@ function createDefaultSceneNodeData(label: string): SceneNodeData {
   };
 }
 
-function createDefaultEdgeData(overrides?: Partial<ChoiceEdgeData>): ChoiceEdgeData {
+export function createDefaultEdgeData(
+  overrides?: Partial<ChoiceEdgeData>
+): ChoiceEdgeData {
   return {
     label: "Choice",
     condition: undefined,
@@ -66,6 +69,31 @@ function createDefaultEdgeData(overrides?: Partial<ChoiceEdgeData>): ChoiceEdgeD
     animated: false,
     ...overrides,
   };
+}
+
+function cloneNodes(nodes: SceneNode[]): SceneNode[] {
+  return nodes.map((n) => ({
+    ...n,
+    data: { ...n.data },
+    position: { ...n.position },
+  }));
+}
+
+function cloneEdges(edges: ChoiceEdge[]): ChoiceEdge[] {
+  return edges.map((e) => ({
+    ...e,
+    data: e.data ? { ...e.data } : e.data,
+  }));
+}
+
+// Inline snapshot helper — always call with captured state, never with get()
+function pushSnapshot(nodes: SceneNode[], edges: ChoiceEdge[], label: string) {
+  useHistoryStore.getState().pushSnapshot({
+    nodes: cloneNodes(nodes),
+    edges: cloneEdges(edges),
+    timestamp: Date.now(),
+    label,
+  });
 }
 
 // ─── Demo data ────────────────────────────────────────────────────────────────
@@ -117,15 +145,24 @@ export const useCanvasStore = create<CanvasStore>()(
       edges: DEMO_EDGES,
       selectedNodeIds: [],
 
+      // ── React Flow handlers ──────────────────────────────────────────────
+
       onNodesChange: (changes: NodeChange<SceneNode>[]) => {
-        set({ nodes: applyNodeChanges(changes, get().nodes) as SceneNode[] });
+        set({
+          nodes: applyNodeChanges(changes, get().nodes) as SceneNode[],
+        });
       },
 
       onEdgesChange: (changes: EdgeChange<ChoiceEdge>[]) => {
-        set({ edges: applyEdgeChanges(changes, get().edges) as ChoiceEdge[] });
+        set({
+          edges: applyEdgeChanges(changes, get().edges) as ChoiceEdge[],
+        });
       },
 
       onConnect: (connection: Connection) => {
+        // Capture state BEFORE mutation
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Connect Nodes");
         set({
           edges: addEdge(
             {
@@ -134,51 +171,97 @@ export const useCanvasStore = create<CanvasStore>()(
               type: "choiceEdge",
               data: createDefaultEdgeData(),
             },
-            get().edges
+            edges // use captured edges, not get().edges
           ) as ChoiceEdge[],
         });
       },
 
-      addSceneNode: (position: { x: number; y: number }) => {
+      // ── Node actions ─────────────────────────────────────────────────────
+
+      addSceneNode: (position) => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Add Node");
         const id = generateId();
-        const nodeCount = get().nodes.length + 1;
         set({
           nodes: [
-            ...get().nodes,
+            ...nodes, // use captured nodes
             {
               id,
               type: "sceneNode",
               position,
-              data: createDefaultSceneNodeData(`Scene ${nodeCount}`),
+              data: createDefaultSceneNodeData(`Scene ${nodes.length + 1}`),
             },
           ],
         });
       },
 
-      deleteNode: (id: string) => {
+      duplicateNode: (id) => {
+        const { nodes, edges } = get();
+        const source = nodes.find((n) => n.id === id);
+        if (!source) return;
+
+        pushSnapshot(nodes, edges, "Duplicate Node");
+        const newId = generateId();
         set({
-          nodes: get().nodes.filter((n) => n.id !== id),
-          edges: get().edges.filter(
+          nodes: [
+            ...nodes,
+            {
+              ...source,
+              id: newId,
+              position: {
+                x: source.position.x + 40,
+                y: source.position.y + 40,
+              },
+              data: {
+                ...source.data,
+                label: `${source.data.label} (Copy)`,
+                dialogues: source.data.dialogues.map((d) => ({
+                  ...d,
+                  id: generateId(),
+                })),
+              },
+              selected: false,
+            },
+          ],
+        });
+      },
+
+      deleteNode: (id) => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Delete Node");
+        set({
+          nodes: nodes.filter((n) => n.id !== id),
+          edges: edges.filter(
             (e) => e.source !== id && e.target !== id
           ),
         });
       },
 
-      deleteEdge: (id: string) => {
-        set({ edges: get().edges.filter((e) => e.id !== id) });
+      deleteEdge: (id) => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Delete Edge");
+        set({
+          edges: edges.filter((e) => e.id !== id),
+        });
       },
 
-      updateNodeData: (id: string, data: Partial<SceneNodeData>) => {
+      updateNodeData: (id, data) => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Update Node");
         set({
-          nodes: get().nodes.map((n) =>
+          nodes: nodes.map((n) =>
             n.id === id ? { ...n, data: { ...n.data, ...data } } : n
           ),
         });
       },
 
-      updateEdgeLabel: (id: string, label: string) => {
+      // ── Edge actions ─────────────────────────────────────────────────────
+
+      updateEdgeLabel: (id, label) => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Update Edge Label");
         set({
-          edges: get().edges.map((e) =>
+          edges: edges.map((e) =>
             e.id === id
               ? { ...e, data: createDefaultEdgeData({ ...e.data, label }) }
               : e
@@ -186,9 +269,10 @@ export const useCanvasStore = create<CanvasStore>()(
         });
       },
 
-      updateEdgeData: (id: string, data: Partial<ChoiceEdgeData>) => {
+      updateEdgeData: (id, data) => {
+        const { edges } = get();
         set({
-          edges: get().edges.map((e) =>
+          edges: edges.map((e) =>
             e.id === id
               ? { ...e, data: createDefaultEdgeData({ ...e.data, ...data }) }
               : e
@@ -196,11 +280,21 @@ export const useCanvasStore = create<CanvasStore>()(
         });
       },
 
-      setSelectedNodeIds: (ids: string[]) => {
+      // ── Selection ────────────────────────────────────────────────────────
+
+      setSelectedNodeIds: (ids) => {
         set({ selectedNodeIds: ids });
       },
 
+      // ── History ──────────────────────────────────────────────────────────
+
+      restoreSnapshot: (nodes, edges) => {
+        set({ nodes, edges, selectedNodeIds: [] });
+      },
+
       clearCanvas: () => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Clear Canvas");
         set({ nodes: [], edges: [], selectedNodeIds: [] });
       },
     }),
