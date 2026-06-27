@@ -14,6 +14,8 @@ export interface Character {
   updatedAt: string;
 }
 
+
+
 // ─── Dialogue ─────────────────────────────────────────────────────────────────
 
 export interface DialogueLine {
@@ -37,10 +39,16 @@ export interface SceneNodeData extends Record<string, unknown> {
   isCollapsed: boolean;
 }
 
+// Add this type:
+export type EdgeType = "bezier" | "straight" | "step";
+
+// Update ChoiceEdgeData:
 export interface ChoiceEdgeData extends Record<string, unknown> {
   label: string;
   condition?: string;
   color: string;
+  edgeType: EdgeType;
+  animated: boolean;
 }
 
 // ─── Note ─────────────────────────────────────────────────────────────────────
@@ -101,3 +109,5 @@ export type SidebarPanel =
   | "notes"
   | "search"
   | null;
+
+  

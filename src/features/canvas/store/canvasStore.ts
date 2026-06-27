@@ -13,6 +13,7 @@ import {
 } from "@xyflow/react";
 import { generateId } from "@/lib/utils";
 import type { SceneNodeData, ChoiceEdgeData } from "@/types";
+import { DEFAULT_EDGE_COLOR } from "@/features/edges/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,10 +34,10 @@ interface CanvasActions {
   deleteNode: (id: string) => void;
   deleteEdge: (id: string) => void;
   updateNodeData: (id: string, data: Partial<SceneNodeData>) => void;
+  updateEdgeLabel: (id: string, label: string) => void;
+  updateEdgeData: (id: string, data: Partial<ChoiceEdgeData>) => void;
   setSelectedNodeIds: (ids: string[]) => void;
   clearCanvas: () => void;
-  updateEdgeLabel: (id: string, label: string) => void;
-
 }
 
 type CanvasStore = CanvasState & CanvasActions;
@@ -53,6 +54,17 @@ function createDefaultSceneNodeData(label: string): SceneNodeData {
     dialogues: [],
     tags: [],
     isCollapsed: false,
+  };
+}
+
+function createDefaultEdgeData(overrides?: Partial<ChoiceEdgeData>): ChoiceEdgeData {
+  return {
+    label: "Choice",
+    condition: undefined,
+    color: DEFAULT_EDGE_COLOR,
+    edgeType: "bezier",
+    animated: false,
+    ...overrides,
   };
 }
 
@@ -85,21 +97,18 @@ const DEMO_EDGES: ChoiceEdge[] = [
     source: "node-1",
     target: "node-2",
     type: "choiceEdge",
-    data: { label: "Accept", condition: undefined, color: "#a855f7" },
+    data: createDefaultEdgeData({ label: "Accept", color: "#a855f7" }),
   },
   {
     id: "edge-2",
     source: "node-1",
     target: "node-3",
     type: "choiceEdge",
-    data: { label: "Reject", condition: undefined, color: "#ef4444" },
+    data: createDefaultEdgeData({ label: "Reject", color: "#ef4444" }),
   },
 ];
 
 // ─── Store ────────────────────────────────────────────────────────────────────
-// NOTE: Immer is intentionally NOT used here.
-// applyNodeChanges/applyEdgeChanges return new arrays and cannot
-// operate on Immer draft proxies — they must use plain set().
 
 export const useCanvasStore = create<CanvasStore>()(
   devtools(
@@ -108,18 +117,12 @@ export const useCanvasStore = create<CanvasStore>()(
       edges: DEMO_EDGES,
       selectedNodeIds: [],
 
-      // React Flow calls this on every node move/select/remove.
-      // applyNodeChanges returns a new array — assign directly.
       onNodesChange: (changes: NodeChange<SceneNode>[]) => {
-        set({
-          nodes: applyNodeChanges(changes, get().nodes) as SceneNode[],
-        });
+        set({ nodes: applyNodeChanges(changes, get().nodes) as SceneNode[] });
       },
 
       onEdgesChange: (changes: EdgeChange<ChoiceEdge>[]) => {
-        set({
-          edges: applyEdgeChanges(changes, get().edges) as ChoiceEdge[],
-        });
+        set({ edges: applyEdgeChanges(changes, get().edges) as ChoiceEdge[] });
       },
 
       onConnect: (connection: Connection) => {
@@ -129,11 +132,7 @@ export const useCanvasStore = create<CanvasStore>()(
               ...connection,
               id: generateId(),
               type: "choiceEdge",
-              data: {
-                label: "Choice",
-                condition: undefined,
-                color: "#a855f7",
-              },
+              data: createDefaultEdgeData(),
             },
             get().edges
           ) as ChoiceEdge[],
@@ -166,15 +165,33 @@ export const useCanvasStore = create<CanvasStore>()(
       },
 
       deleteEdge: (id: string) => {
-        set({
-          edges: get().edges.filter((e) => e.id !== id),
-        });
+        set({ edges: get().edges.filter((e) => e.id !== id) });
       },
 
       updateNodeData: (id: string, data: Partial<SceneNodeData>) => {
         set({
           nodes: get().nodes.map((n) =>
             n.id === id ? { ...n, data: { ...n.data, ...data } } : n
+          ),
+        });
+      },
+
+      updateEdgeLabel: (id: string, label: string) => {
+        set({
+          edges: get().edges.map((e) =>
+            e.id === id
+              ? { ...e, data: createDefaultEdgeData({ ...e.data, label }) }
+              : e
+          ),
+        });
+      },
+
+      updateEdgeData: (id: string, data: Partial<ChoiceEdgeData>) => {
+        set({
+          edges: get().edges.map((e) =>
+            e.id === id
+              ? { ...e, data: createDefaultEdgeData({ ...e.data, ...data }) }
+              : e
           ),
         });
       },
@@ -186,18 +203,7 @@ export const useCanvasStore = create<CanvasStore>()(
       clearCanvas: () => {
         set({ nodes: [], edges: [], selectedNodeIds: [] });
       },
-
-      updateEdgeLabel: (id: string, label: string) => {
-        set({
-          edges: get().edges.map((e) =>
-            e.id === id
-              ? { ...e, data: { ...e.data, label, color: e.data?.color ?? "#a855f7" } }
-              : e
-          ),
-        });
-      },
     }),
     { name: "StoryBranch:Canvas" }
   )
-
 );

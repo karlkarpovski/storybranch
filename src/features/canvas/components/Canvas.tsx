@@ -1,5 +1,5 @@
 // src/features/canvas/components/Canvas.tsx
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   ReactFlow,
   Background,
@@ -15,32 +15,52 @@ import {
 import { useCanvasStore } from "../store/canvasStore";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { SceneNode } from "@/features/nodes/components/SceneNode";
-import { PlaceholderChoiceEdge } from "./PlaceholderChoiceEdge";
-import type { SceneNode as SceneNodeType, ChoiceEdge } from "../store/canvasStore";
-
+import { ChoiceEdge } from "@/features/edges/components/ChoiceEdge";
+import type { SceneNode as SceneNodeType, ChoiceEdge as ChoiceEdgeType } from "../store/canvasStore";
 // Defined OUTSIDE component to prevent remounting on every render
 const nodeTypes = {
   sceneNode: SceneNode,
 };
 
 const edgeTypes = {
-  choiceEdge: PlaceholderChoiceEdge,
+  choiceEdge: ChoiceEdge,
 };
 
+// In Canvas.tsx replace ArrowheadDefs with:
 function ArrowheadDefs() {
+  const edges = useCanvasStore((s) => s.edges);
+  const nodes = useCanvasStore((s) => s.nodes);
+
+  // Collect unique colors from node colors (edges inherit source node color)
+  const colors = useMemo(() => {
+    const set = new Set<string>();
+    set.add("#a855f7"); // default purple always included
+    nodes.forEach((n) => {
+      if (n.data?.color) set.add(n.data.color as string);
+    });
+    return Array.from(set);
+  }, [nodes, edges]);
+
   return (
     <svg style={{ position: "absolute", width: 0, height: 0 }}>
       <defs>
-        <marker
-          id="arrowhead"
-          markerWidth="10"
-          markerHeight="7"
-          refX="9"
-          refY="3.5"
-          orient="auto"
-        >
-          <polygon points="0 0, 10 3.5, 0 7" fill="#a855f7" opacity="0.8" />
-        </marker>
+        {colors.map((color) => (
+          <marker
+            key={color}
+            id={`arrowhead-${color.replace("#", "")}`}
+            markerWidth="10"
+            markerHeight="7"
+            refX="9"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon
+              points="0 0, 10 3.5, 0 7"
+              fill={color}
+              opacity="0.9"
+            />
+          </marker>
+        ))}
       </defs>
     </svg>
   );
@@ -65,7 +85,7 @@ export function Canvas() {
   );
 
   const handleEdgesChange = useCallback(
-    (changes: EdgeChange<ChoiceEdge>[]) => onEdgesChange(changes),
+    (changes: EdgeChange<ChoiceEdgeType>[]) => onEdgesChange(changes),
     [onEdgesChange]
   );
 
@@ -125,7 +145,7 @@ export function Canvas() {
     <div style={{ width: "100%", height: "100%" }} className="relative">
       <ArrowheadDefs />
 
-      <ReactFlow<SceneNodeType, ChoiceEdge>
+      <ReactFlow<SceneNodeType, ChoiceEdgeType>
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
