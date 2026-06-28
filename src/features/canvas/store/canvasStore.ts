@@ -138,12 +138,16 @@ const DEMO_EDGES: ChoiceEdge[] = [
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
+
+
 export const useCanvasStore = create<CanvasStore>()(
   devtools(
     (set, get) => ({
       nodes: DEMO_NODES,
       edges: DEMO_EDGES,
       selectedNodeIds: [],
+
+
 
       // ── React Flow handlers ──────────────────────────────────────────────
 
@@ -297,7 +301,13 @@ export const useCanvasStore = create<CanvasStore>()(
         pushSnapshot(nodes, edges, "Clear Canvas");
         set({ nodes: [], edges: [], selectedNodeIds: [] });
       },
+
+
+      
+
+
     }),
     { name: "StoryBranch:Canvas" }
+      
   )
 );

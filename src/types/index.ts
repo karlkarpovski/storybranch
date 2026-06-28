@@ -110,4 +110,11 @@ export type SidebarPanel =
   | "search"
   | null;
 
+// ─── Note Node Data ───────────────────────────────────────────────────────────
+export interface NoteNodeData extends Record<string, unknown> {
+  content: string;
+  color: string;
+  fontSize: number;
+}
+
   
