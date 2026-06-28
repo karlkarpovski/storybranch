@@ -11,6 +11,7 @@ export function useUndoRedo() {
   const restoreSnapshot = useCanvasStore((s) => s.restoreSnapshot);
 
   const handleUndo = useCallback(() => {
+    // No cast needed — historyStore now uses CanvasNode[]
     const { nodes, edges } = useCanvasStore.getState();
     const snapshot = undo(nodes, edges);
     if (snapshot) restoreSnapshot(snapshot.nodes, snapshot.edges);
@@ -34,7 +35,7 @@ export function useUndoRedo() {
 
       if (isUndo) {
         e.preventDefault();
-        e.stopImmediatePropagation(); // stop Canvas.tsx listener seeing it
+        e.stopImmediatePropagation();
         handleUndo();
       }
       if (isRedo) {
@@ -44,7 +45,6 @@ export function useUndoRedo() {
       }
     };
 
-    // useCapture: true — fires BEFORE other listeners including Canvas.tsx
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [handleUndo, handleRedo]);

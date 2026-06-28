@@ -13,33 +13,34 @@ import {
 } from "@xyflow/react";
 
 import { useCanvasStore } from "../store/canvasStore";
+import type { CanvasNode, ChoiceEdge as ChoiceEdgeType, SceneNode } from "../store/canvasStore";
 import { CanvasToolbar } from "./CanvasToolbar";
-import { SceneNode } from "@/features/nodes/components/SceneNode";
-import { ChoiceEdge } from "@/features/edges/components/ChoiceEdge";
-import type { SceneNode as SceneNodeType, ChoiceEdge as ChoiceEdgeType } from "../store/canvasStore";
-// Defined OUTSIDE component to prevent remounting on every render
+import { SceneNode as SceneNodeComponent } from "@/features/nodes/components/SceneNode";
+import { NoteNode as NoteNodeComponent } from "@/features/notes/components/NoteNode";
+import { ChoiceEdge as ChoiceEdgeComponent } from "@/features/edges/components/ChoiceEdge";
+import { useStore } from "@/store";
+
+// Defined outside component — prevents remounting on every render
 const nodeTypes = {
-  sceneNode: SceneNode,
+  sceneNode: SceneNodeComponent,
+  noteNode: NoteNodeComponent,
 };
 
 const edgeTypes = {
-  choiceEdge: ChoiceEdge,
+  choiceEdge: ChoiceEdgeComponent,
 };
 
-// In Canvas.tsx replace ArrowheadDefs with:
 function ArrowheadDefs() {
-  const edges = useCanvasStore((s) => s.edges);
   const nodes = useCanvasStore((s) => s.nodes);
 
-  // Collect unique colors from node colors (edges inherit source node color)
   const colors = useMemo(() => {
     const set = new Set<string>();
-    set.add("#a855f7"); // default purple always included
+    set.add("#a855f7");
     nodes.forEach((n) => {
       if (n.data?.color) set.add(n.data.color as string);
     });
     return Array.from(set);
-  }, [nodes, edges]);
+  }, [nodes]);
 
   return (
     <svg style={{ position: "absolute", width: 0, height: 0 }}>
@@ -74,13 +75,16 @@ export function Canvas() {
     onEdgesChange,
     onConnect,
     addSceneNode,
+    addNoteNode,
     deleteNode,
     deleteEdge,
     setSelectedNodeIds,
   } = useCanvasStore();
 
+  const activeSidebarPanel = useStore((s) => s.activeSidebarPanel);
+
   const handleNodesChange = useCallback(
-    (changes: NodeChange<SceneNodeType>[]) => onNodesChange(changes),
+    (changes: NodeChange<CanvasNode>[]) => onNodesChange(changes),
     [onNodesChange]
   );
 
@@ -95,7 +99,7 @@ export function Canvas() {
   );
 
   const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: SceneNodeType[] }) => {
+    ({ nodes: selectedNodes }: { nodes: CanvasNode[] }) => {
       setSelectedNodeIds(selectedNodes.map((n) => n.id));
     },
     [setSelectedNodeIds]
@@ -108,12 +112,14 @@ export function Canvas() {
         target.classList.contains("react-flow__pane") ||
         target.classList.contains("react-flow__background");
       if (!isPane) return;
-      addSceneNode({
-        x: event.clientX - 120,
-        y: event.clientY - 60,
-      });
+
+      if (activeSidebarPanel === "notes") {
+        addNoteNode({ x: event.clientX - 100, y: event.clientY - 60 });
+      } else {
+        addSceneNode({ x: event.clientX - 120, y: event.clientY - 60 });
+      }
     },
-    [addSceneNode]
+    [addSceneNode, addNoteNode, activeSidebarPanel]
   );
 
   useEffect(() => {
@@ -141,7 +147,6 @@ export function Canvas() {
         const { selectedNodeIds, duplicateNode } = useCanvasStore.getState();
         selectedNodeIds.forEach((id) => duplicateNode(id));
       }
-
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -152,7 +157,7 @@ export function Canvas() {
     <div style={{ width: "100%", height: "100%" }} className="relative">
       <ArrowheadDefs />
 
-      <ReactFlow<SceneNodeType, ChoiceEdgeType>
+      <ReactFlow<CanvasNode, ChoiceEdgeType>
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -181,7 +186,10 @@ export function Canvas() {
           color="hsl(var(--canvas-grid))"
         />
         <MiniMap
-          nodeColor={(node) => (node as SceneNodeType).data?.color ?? "#a855f7"}
+          nodeColor={(node) => {
+            const n = node as SceneNode;
+            return (n.data?.color as string) ?? "#a855f7";
+          }}
           maskColor="hsl(var(--background) / 0.7)"
           style={{ width: 160, height: 100 }}
         />

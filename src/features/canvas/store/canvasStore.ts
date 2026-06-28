@@ -12,24 +12,29 @@ import {
   addEdge,
 } from "@xyflow/react";
 import { generateId } from "@/lib/utils";
-import type { SceneNodeData, ChoiceEdgeData } from "@/types";
+import type { SceneNodeData, ChoiceEdgeData, NoteNodeData } from "@/types";
 import { DEFAULT_EDGE_COLOR } from "@/features/edges/constants";
 import { useHistoryStore } from "./historyStore";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export type SceneNode = Node<SceneNodeData>;
+export type NoteNode = Node<NoteNodeData>;
 export type ChoiceEdge = Edge<ChoiceEdgeData>;
+export type CanvasNode = SceneNode | NoteNode;
 
 interface CanvasState {
-  nodes: SceneNode[];
+  nodes: CanvasNode[];
   edges: ChoiceEdge[];
   selectedNodeIds: string[];
 }
 
 interface CanvasActions {
-  onNodesChange: (changes: NodeChange<SceneNode>[]) => void;
+  onNodesChange: (changes: NodeChange<CanvasNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<ChoiceEdge>[]) => void;
   onConnect: (connection: Connection) => void;
   addSceneNode: (position: { x: number; y: number }) => void;
+  addNoteNode: (position: { x: number; y: number }) => void;
   duplicateNode: (id: string) => void;
   deleteNode: (id: string) => void;
   deleteEdge: (id: string) => void;
@@ -37,7 +42,7 @@ interface CanvasActions {
   updateEdgeLabel: (id: string, label: string) => void;
   updateEdgeData: (id: string, data: Partial<ChoiceEdgeData>) => void;
   setSelectedNodeIds: (ids: string[]) => void;
-  restoreSnapshot: (nodes: SceneNode[], edges: ChoiceEdge[]) => void;
+  restoreSnapshot: (nodes: CanvasNode[], edges: ChoiceEdge[]) => void;
   clearCanvas: () => void;
 }
 
@@ -71,7 +76,8 @@ export function createDefaultEdgeData(
   };
 }
 
-function cloneNodes(nodes: SceneNode[]): SceneNode[] {
+// ✅ Use CanvasNode[] throughout — not SceneNode[]
+function cloneNodes(nodes: CanvasNode[]): CanvasNode[] {
   return nodes.map((n) => ({
     ...n,
     data: { ...n.data },
@@ -86,8 +92,11 @@ function cloneEdges(edges: ChoiceEdge[]): ChoiceEdge[] {
   }));
 }
 
-// Inline snapshot helper — always call with captured state, never with get()
-function pushSnapshot(nodes: SceneNode[], edges: ChoiceEdge[], label: string) {
+function pushSnapshot(
+  nodes: CanvasNode[],
+  edges: ChoiceEdge[],
+  label: string
+) {
   useHistoryStore.getState().pushSnapshot({
     nodes: cloneNodes(nodes),
     edges: cloneEdges(edges),
@@ -98,7 +107,7 @@ function pushSnapshot(nodes: SceneNode[], edges: ChoiceEdge[], label: string) {
 
 // ─── Demo data ────────────────────────────────────────────────────────────────
 
-const DEMO_NODES: SceneNode[] = [
+const DEMO_NODES: CanvasNode[] = [
   {
     id: "node-1",
     type: "sceneNode",
@@ -138,8 +147,6 @@ const DEMO_EDGES: ChoiceEdge[] = [
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-
-
 export const useCanvasStore = create<CanvasStore>()(
   devtools(
     (set, get) => ({
@@ -147,13 +154,11 @@ export const useCanvasStore = create<CanvasStore>()(
       edges: DEMO_EDGES,
       selectedNodeIds: [],
 
+      // ── React Flow handlers ────────────────────────────────────────────
 
-
-      // ── React Flow handlers ──────────────────────────────────────────────
-
-      onNodesChange: (changes: NodeChange<SceneNode>[]) => {
+      onNodesChange: (changes: NodeChange<CanvasNode>[]) => {
         set({
-          nodes: applyNodeChanges(changes, get().nodes) as SceneNode[],
+          nodes: applyNodeChanges(changes, get().nodes) as unknown as CanvasNode[],
         });
       },
 
@@ -164,7 +169,6 @@ export const useCanvasStore = create<CanvasStore>()(
       },
 
       onConnect: (connection: Connection) => {
-        // Capture state BEFORE mutation
         const { nodes, edges } = get();
         pushSnapshot(nodes, edges, "Connect Nodes");
         set({
@@ -175,28 +179,46 @@ export const useCanvasStore = create<CanvasStore>()(
               type: "choiceEdge",
               data: createDefaultEdgeData(),
             },
-            edges // use captured edges, not get().edges
+            edges
           ) as ChoiceEdge[],
         });
       },
 
-      // ── Node actions ─────────────────────────────────────────────────────
+      // ── Node actions ───────────────────────────────────────────────────
 
       addSceneNode: (position) => {
         const { nodes, edges } = get();
         pushSnapshot(nodes, edges, "Add Node");
         const id = generateId();
+        const sceneNodes = nodes.filter((n) => n.type === "sceneNode");
         set({
           nodes: [
-            ...nodes, // use captured nodes
+            ...nodes,
             {
               id,
               type: "sceneNode",
               position,
-              data: createDefaultSceneNodeData(`Scene ${nodes.length + 1}`),
-            },
+              data: createDefaultSceneNodeData(`Scene ${sceneNodes.length + 1}`),
+            } as SceneNode,
           ],
         });
+      },
+
+      addNoteNode: (position) => {
+        const { nodes, edges } = get();
+        pushSnapshot(nodes, edges, "Add Note");
+        const id = generateId();
+        const newNote: NoteNode = {
+          id,
+          type: "noteNode",
+          position,
+          data: {
+            content: "",
+            color: "#fef08a",
+            fontSize: 14,
+          },
+        };
+        set({ nodes: [...nodes, newNote] });
       },
 
       duplicateNode: (id) => {
@@ -206,28 +228,48 @@ export const useCanvasStore = create<CanvasStore>()(
 
         pushSnapshot(nodes, edges, "Duplicate Node");
         const newId = generateId();
-        set({
-          nodes: [
-            ...nodes,
-            {
-              ...source,
-              id: newId,
-              position: {
-                x: source.position.x + 40,
-                y: source.position.y + 40,
+
+        // Only duplicate scene nodes fully — notes just copy position
+        if (source.type === "sceneNode") {
+          const sceneSource = source as SceneNode;
+          set({
+            nodes: [
+              ...nodes,
+              {
+                ...sceneSource,
+                id: newId,
+                position: {
+                  x: sceneSource.position.x + 40,
+                  y: sceneSource.position.y + 40,
+                },
+                data: {
+                  ...sceneSource.data,
+                  label: `${sceneSource.data.label} (Copy)`,
+                  dialogues: sceneSource.data.dialogues.map((d) => ({
+                    ...d,
+                    id: generateId(),
+                  })),
+                },
+                selected: false,
+              } as SceneNode,
+            ],
+          });
+        } else {
+          set({
+            nodes: [
+              ...nodes,
+              {
+                ...source,
+                id: newId,
+                position: {
+                  x: source.position.x + 40,
+                  y: source.position.y + 40,
+                },
+                selected: false,
               },
-              data: {
-                ...source.data,
-                label: `${source.data.label} (Copy)`,
-                dialogues: source.data.dialogues.map((d) => ({
-                  ...d,
-                  id: generateId(),
-                })),
-              },
-              selected: false,
-            },
-          ],
-        });
+            ],
+          });
+        }
       },
 
       deleteNode: (id) => {
@@ -244,9 +286,7 @@ export const useCanvasStore = create<CanvasStore>()(
       deleteEdge: (id) => {
         const { nodes, edges } = get();
         pushSnapshot(nodes, edges, "Delete Edge");
-        set({
-          edges: edges.filter((e) => e.id !== id),
-        });
+        set({ edges: edges.filter((e) => e.id !== id) });
       },
 
       updateNodeData: (id, data) => {
@@ -259,7 +299,7 @@ export const useCanvasStore = create<CanvasStore>()(
         });
       },
 
-      // ── Edge actions ─────────────────────────────────────────────────────
+      // ── Edge actions ───────────────────────────────────────────────────
 
       updateEdgeLabel: (id, label) => {
         const { nodes, edges } = get();
@@ -284,16 +324,16 @@ export const useCanvasStore = create<CanvasStore>()(
         });
       },
 
-      // ── Selection ────────────────────────────────────────────────────────
+      // ── Selection ──────────────────────────────────────────────────────
 
       setSelectedNodeIds: (ids) => {
         set({ selectedNodeIds: ids });
       },
 
-      // ── History ──────────────────────────────────────────────────────────
+      // ── History ────────────────────────────────────────────────────────
 
       restoreSnapshot: (nodes, edges) => {
-        set({ nodes, edges, selectedNodeIds: [] });
+        set({ nodes: nodes as unknown as CanvasNode[], edges, selectedNodeIds: [] });
       },
 
       clearCanvas: () => {
@@ -301,13 +341,7 @@ export const useCanvasStore = create<CanvasStore>()(
         pushSnapshot(nodes, edges, "Clear Canvas");
         set({ nodes: [], edges: [], selectedNodeIds: [] });
       },
-
-
-      
-
-
     }),
     { name: "StoryBranch:Canvas" }
-      
   )
 );
