@@ -82,7 +82,7 @@ function cloneNodes(nodes: CanvasNode[]): CanvasNode[] {
     ...n,
     data: { ...n.data },
     position: { ...n.position },
-  }));
+  })) as unknown as CanvasNode[];
 }
 
 function cloneEdges(edges: ChoiceEdge[]): ChoiceEdge[] {
@@ -267,7 +267,7 @@ export const useCanvasStore = create<CanvasStore>()(
                 },
                 selected: false,
               },
-            ],
+            ] as unknown as CanvasNode[],
           });
         }
       },
@@ -295,7 +295,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set({
           nodes: nodes.map((n) =>
             n.id === id ? { ...n, data: { ...n.data, ...data } } : n
-          ),
+          ) as unknown as CanvasNode[],
         });
       },
 
