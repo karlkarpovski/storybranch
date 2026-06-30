@@ -117,4 +117,12 @@ export interface NoteNodeData extends Record<string, unknown> {
   fontSize: number;
 }
 
+export interface ProjectFile {
+  version: string;          // schema version, e.g. "1.0.0"
+  metadata: ProjectMetadata;
+  nodes: unknown[];         // CanvasNode[] — kept loose to avoid circular import
+  edges: unknown[];         // ChoiceEdge[]
+  characters: Record<string, Character>;
+}
+
   

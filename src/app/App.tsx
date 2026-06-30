@@ -6,6 +6,9 @@ import { Canvas } from "@/features/canvas/components/Canvas";
 import { useStore } from "@/store";
 import { generateId } from "@/lib/utils";
 import { useEffect } from "react";
+import { persistence } from "@/features/project/adapters";
+import { useCanvasStore } from "@/features/canvas/store/canvasStore";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,6 +18,47 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const setProjectMetadata = useStore((s) => s.setProjectMetadata);
+
+  useEffect(() => {
+    // Try loading autosave on first mount
+    (async () => {
+      const draft = await persistence.loadAutosave();
+      if (draft) {
+        setProjectMetadata(draft.metadata);
+        useCanvasStore.getState().restoreSnapshot(
+          draft.nodes as never,
+          draft.edges as never
+        );
+        useStore.setState({ characters: draft.characters });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = useCanvasStore.subscribe(() => {
+      useStore.getState().markDirty();
+    });
+    return unsubscribe;
+  }, []);
+
+  // Add Ctrl+S handler:
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        const meta = useStore.getState().metadata;
+        if (!meta) return;
+        const { nodes, edges } = useCanvasStore.getState();
+        const chars = useStore.getState().characters;
+        const { serializeProject } = await import("@/features/project/utils/serialization");
+        const project = serializeProject(meta, nodes, edges, chars);
+        await persistence.saveAs(project);
+        useStore.getState().markClean();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     setProjectMetadata({

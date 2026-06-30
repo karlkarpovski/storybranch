@@ -7,6 +7,11 @@
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store";
+import { ProjectMenu } from "@/features/project/components/ProjectMenu";
+import { AutosaveIndicator } from "@/features/project/components/AutosaveIndicator";
+import { useAutosave } from "@/features/project/hooks/useAutosave";
+
+const { status } = useAutosave();
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,25 +38,26 @@ export function Layout({ children }: LayoutProps) {
         data-tauri-drag-region
       >
         {/* App name + project name */}
-        <div className="flex items-center gap-2">
-          <span className="text-primary font-semibold text-sm tracking-wide">
-            StoryBranch
-          </span>
-          {metadata && (
-            <>
-              <span className="text-muted-foreground text-sm">/</span>
-              <span className="text-sm text-foreground">
-                {metadata.name}
-              </span>
-              {isDirty && (
-                <span
-                  className="w-2 h-2 rounded-full bg-primary"
-                  title="Unsaved changes"
-                />
-              )}
-            </>
-          )}
+        <div className="flex items-center gap-3">
+          <ProjectMenu />
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-2">
+            <span className="text-primary font-semibold text-sm tracking-wide">
+              StoryBranch
+            </span>
+            {metadata && (
+              <>
+                <span className="text-muted-foreground text-sm">/</span>
+                <span className="text-sm text-foreground">{metadata.name}</span>
+                {isDirty && (
+                  <span className="w-2 h-2 rounded-full bg-primary" title="Unsaved changes" />
+                )}
+              </>
+            )}
+          </div>
         </div>
+
+        <AutosaveIndicator status={status} />
 
         {/* Window controls placeholder — Tauri handles native controls */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
