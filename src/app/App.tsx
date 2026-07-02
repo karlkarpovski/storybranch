@@ -8,6 +8,7 @@ import { generateId } from "@/lib/utils";
 import { useEffect } from "react";
 import { useCanvasStore } from "@/features/canvas/store/canvasStore";
 import { persistence } from "@/features/project/adapters";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,9 +16,8 @@ const queryClient = new QueryClient({
   },
 });
 
+// Mounts the undo/redo keyboard shortcuts globally
 function UndoRedoProvider() {
-  // Lazy import to avoid circular deps
-  const { useUndoRedo } = require("@/hooks/useUndoRedo");
   useUndoRedo();
   return null;
 }
@@ -28,7 +28,6 @@ export default function App() {
   // ── Default project on first load ──────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      // Try autosave first
       try {
         const draft = await persistence.loadAutosave();
         if (draft) {
@@ -38,13 +37,12 @@ export default function App() {
             draft.edges as never
           );
           useStore.setState({ characters: draft.characters });
-          return; // loaded from autosave — skip default project
+          return;
         }
       } catch (err) {
         console.warn("No autosave found:", err);
       }
 
-      // No autosave — create fresh project
       setProjectMetadata({
         id: generateId(),
         name: "Untitled Story",
@@ -91,6 +89,8 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ReactFlowProvider>
+        {/* UndoRedoProvider must be inside ReactFlowProvider */}
+        <UndoRedoProvider />
         <Layout>
           <Canvas />
         </Layout>

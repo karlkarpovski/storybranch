@@ -71,15 +71,13 @@ export function ProjectMenu() {
     if (!project) return;
 
     setProjectMetadata(project.metadata);
-    restoreSnapshot(
+
+    useCanvasStore.getState().restoreSnapshot(
       project.nodes as never,
       project.edges as never
     );
 
-    // Restore characters
-    const setCharacters = useStore.setState;
-    setCharacters({ characters: project.characters });
-
+    useStore.setState({ characters: project.characters });
     markClean();
   };
 
