@@ -11,6 +11,7 @@ import { SceneNodeContextMenu } from "./SceneNodeContextMenu";
 import { cn } from "@/lib/utils";
 import type { SceneNode as SceneNodeFlow } from "@/features/canvas/store/canvasStore";
 import type { SceneNodeData } from "@/types";
+import { useSearchStore } from "@/features/search/store/searchStore";
 
 // ─── Handle component ─────────────────────────────────────────────────────────
 
@@ -68,6 +69,9 @@ export const SceneNode = memo(function SceneNode({
     [handleUpdate, data.isCollapsed]
   );
 
+  const highlightedNodeId = useSearchStore((s) => s.highlightedNodeId);
+  const isHighlighted = highlightedNodeId === id;
+
   return (
     <SceneNodeContextMenu
       nodeId={id}
@@ -77,12 +81,12 @@ export const SceneNode = memo(function SceneNode({
       <div
         className={cn(
           "min-w-[200px] max-w-[320px] rounded-lg border-2",
-          "bg-node-bg shadow-lg",
-          "transition-all duration-150",
+          "bg-node-bg shadow-lg transition-all duration-150",
           selected
             ? "border-primary shadow-primary/20 shadow-xl"
             : "border-node-border hover:border-primary/40",
-          selected && "ring-1 ring-primary/20"
+          selected && "ring-1 ring-primary/20",
+          isHighlighted && "node-highlight" // ← pulse animation
         )}
         style={{ width: 240 }}
       >

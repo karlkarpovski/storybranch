@@ -5,6 +5,8 @@ import { SidebarHeader } from "./SidebarHeader";
 import { CharacterManager } from "@/features/characters/components/CharacterManager";
 import { AssetManager } from "@/features/assets/components/AssetManager";
 import type { SidebarPanel } from "@/types";
+import { SearchPanel } from "@/features/search/components/SearchPanel";
+
 
 const PANEL_CONFIG: Record<
   Exclude<SidebarPanel, null>,
@@ -60,13 +62,8 @@ export function Sidebar() {
             </p>
           </div>
         )}
-        {activeSidebarPanel === "search" && (
-          <div className="p-3">
-            <p className="text-xs text-muted-foreground">
-              Search coming in Phase 8.
-            </p>
-          </div>
-        )}
+        {activeSidebarPanel === "search" && <SearchPanel />}
+
       </div>
     </div>
   );

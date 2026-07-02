@@ -118,3 +118,14 @@
 .react-flow__controls-button:hover {
   background-color: hsl(var(--accent)) !important;
 }
+
+/* Add to src/index.css — node highlight pulse animation */
+@keyframes nodePulse {
+  0%   { box-shadow: 0 0 0 0px hsl(var(--primary) / 0.6); }
+  50%  { box-shadow: 0 0 0 8px hsl(var(--primary) / 0.2); }
+  100% { box-shadow: 0 0 0 0px hsl(var(--primary) / 0.0); }
+}
+
+.node-highlight {
+  animation: nodePulse 1.5s ease-out;
+}
